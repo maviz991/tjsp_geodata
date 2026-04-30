@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Projeto Geo
+dados_limpos/
+dados_staging/
+resultados/
+amostras_dados/
+amostra_dados/
+.claude/
+__pycache__/
+
+# VS Code / OS
+.vscode/
+.DS_Store
+Thumbs.db
