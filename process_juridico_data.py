@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 import geopandas as gpd
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon, MultiPolygon
 import os
 import json
 import io
@@ -41,35 +41,85 @@ def main():
     df_unidades['num_varas_instaladas'] = pd.to_numeric(df_unidades['num_varas_instaladas'], errors='coerce').fillna(0).astype(int)
 
     print("Step 2: Linking Units and Varas...")
-    # Map unit name to its vara count and entrancia
+    # Map unit name to its vara count, entrancia, and actual varas list (from Setores)
+    SETORES_CSV = REPO_BASE_URL + "Setores.csv"
+    r_setores = fetch_with_retry(SETORES_CSV)
+    df_setores = pd.read_csv(io.StringIO(r_setores.text)).map(lambda x: x.strip() if isinstance(x, str) else x)
+    
+    # Filter only relevant "setores" that are actually judicial units (Varas, Juizados, Ofícios)
+    # We ignore administrative departments like 'Copa', 'Administração', 'Mandados', etc.
+    patterns = ['VARA', 'JUIZADO', 'OFICIO JUDICIAL']
+    df_setores = df_setores[df_setores['setor'].str.upper().str.contains('|'.join(patterns), na=False)]
+    
+    df_setores_agg = df_setores.groupby('id_unidade')['setor'].apply(lambda x: ", ".join(sorted(set(x.astype(str))))).reset_index()
+    df_setores_agg = df_setores_agg.rename(columns={'setor': 'lista_varas_unidade'})
+    
+    df_unidades = df_unidades.merge(df_setores_agg, on='id_unidade', how='left')
+
     # Note: Using comarca_key + unit_name to avoid duplicates across state
     df_unidades['unit_key'] = df_unidades['comarca_corrigido'] + "_" + df_unidades['unidade']
     df_mapping['unit_key'] = df_mapping['comarca_tjsp'] + "_" + df_mapping['unidades']
     
-    unit_meta = df_unidades[['unit_key', 'num_varas_instaladas', 'entrancia']].drop_duplicates(subset='unit_key')
+    unit_meta = df_unidades[['unit_key', 'num_varas_instaladas', 'entrancia', 'lista_varas_unidade']].drop_duplicates(subset='unit_key')
     df_mapping = df_mapping.merge(unit_meta, on='unit_key', how='left')
-
     print("Step 3: Consolidating Municipality Data...")
-    # Aggregate by municipality
-    agg_dict = {
-        'unidades': lambda x: ", ".join(sorted(set(x.astype(str)))),
-        'num_varas_instaladas': 'sum',
-        'comarca_tjsp': 'first',
-        'municipio_tjsp': 'first',
-        'raj': 'first',
-        'comarca_sede': 'max'
-    }
-    df_mun_agg = df_mapping.groupby('id_municipio').agg(agg_dict).reset_index()
-    df_mun_agg = df_mun_agg.rename(columns={'num_varas_instaladas': 'total_varas_municipio'})
+    
+    # Create base municipality dataframe with 1 row per municipality
+    df_mun_base = df_mapping[['id_municipio', 'municipio_tjsp', 'comarca_tjsp', 'raj', 'comarca_sede']].drop_duplicates(subset=['id_municipio'])
+    
+    # Map each physical unit to its municipality using its string address
+    mun_name_to_id = df_mapping[['municipio_corrigido', 'id_municipio']].drop_duplicates().set_index('municipio_corrigido')['id_municipio'].to_dict()
+    mun_name_to_id.update(df_mapping[['municipio_tjsp', 'id_municipio']].drop_duplicates().set_index('municipio_tjsp')['id_municipio'].to_dict())
+    
+    df_unidades['id_municipio_fisico'] = df_unidades['endereco_municipio'].map(mun_name_to_id)
+    
+    # Helper to clean and natural sort the varas lists
+    def agg_varas_clean(x):
+        varas = []
+        for s in x.dropna():
+            if isinstance(s, str):
+                varas.extend([v.strip() for v in s.split(',') if v.strip()])
+        unique_varas = sorted(set(varas))
+        def natural_key(string_):
+            return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', string_)]
+        unique_varas.sort(key=natural_key)
+        return ", ".join(unique_varas) if unique_varas else None
+
+    # Calculate physical varas per municipality
+    mun_varas = df_unidades.groupby('id_municipio_fisico').agg({
+        'unidade': lambda x: ", ".join(sorted(set(x.astype(str)))),
+        'lista_varas_unidade': agg_varas_clean
+    }).reset_index().rename(columns={
+        'id_municipio_fisico': 'id_municipio', 
+        'lista_varas_unidade': 'varas_municipio',
+        'unidade': 'unidades'
+    })
+    
+    df_mun_base = df_mun_base.merge(mun_varas, on='id_municipio', how='left')
+    df_mun_base['total_varas_municipio'] = df_mun_base['varas_municipio'].apply(lambda x: len(str(x).split(',')) if pd.notnull(x) and str(x).strip() else 0)
 
     # Step 4: Seat Mapping and Foro Data
-    comarca_seat_map = df_mapping[df_mapping['comarca_sede'] == 1][['comarca_tjsp', 'id_municipio']].drop_duplicates()
-    comarca_seat_map.columns = ['comarca_tjsp', 'id_foro_ibge']
-    df_mun_agg = df_mun_agg.merge(comarca_seat_map, on='comarca_tjsp', how='left')
+    # Extract clean RAJ and Foro info from the Seat municipality to fix source data inconsistencies
+    # (Some satellite cities have "0ª RAJ" in the source while the seat is correct)
+    foro_seat_data = df_mapping[df_mapping['comarca_sede'] == 1][['comarca_tjsp', 'id_municipio', 'raj']].drop_duplicates(subset=['comarca_tjsp'])
+    foro_seat_data.columns = ['comarca_tjsp', 'id_foro_ibge', 'raj_sede']
     
-    # Foro Varas and Entrancia
-    foro_meta = df_mun_agg.groupby('id_foro_ibge')['total_varas_municipio'].sum().reset_index()
-    foro_meta.columns = ['id_foro_ibge', 'populacao_foro_varas'] # Temporary name
+    df_mun_base = df_mun_base.merge(foro_seat_data, on='comarca_tjsp', how='left')
+    
+    # Overwrite RAJ with the seat's RAJ to ensure consistency
+    df_mun_base['raj'] = df_mun_base['raj_sede']
+
+    
+    # Calculate varas per foro (comarca)
+    foro_varas = df_unidades.groupby('id_comarca').agg({
+        'lista_varas_unidade': agg_varas_clean
+    }).reset_index().rename(columns={
+        'id_comarca': 'id_foro_ibge', 
+        'lista_varas_unidade': 'varas_foro'
+    })
+    
+    df_mun_base = df_mun_base.merge(foro_varas, on='id_foro_ibge', how='left')
+    df_mun_base['total_varas_foro'] = df_mun_base['varas_foro'].apply(lambda x: len(str(x).split(',')) if pd.notnull(x) and str(x).strip() else 0)
     
     # Get Seat Entrancia
     seat_entrancia = df_unidades.sort_values(by=['id_comarca', 'entrancia']).drop_duplicates(subset='id_comarca')[['id_comarca', 'entrancia']]
@@ -94,8 +144,7 @@ def main():
     df_seats['longitude'] = df_seats['centroid'].apply(lambda p: p.x if pd.notnull(p) else None)
     
     # Merge all into rich mapping
-    df_final = df_mun_agg.merge(foro_meta, on='id_foro_ibge', how='left')
-    df_final = df_final.merge(seat_entrancia, on='id_foro_ibge', how='left')
+    df_final = df_mun_base.merge(seat_entrancia, on='id_foro_ibge', how='left')
     df_final = df_final.merge(df_seats[['id_comarca', 'endereco_sede', 'latitude', 'longitude', 'cj', 'id_cj']], left_on='id_foro_ibge', right_on='id_comarca', how='left')
     
     # CJ Meta
@@ -107,6 +156,10 @@ def main():
     foro_cities = df_final.groupby('id_foro_ibge')['municipio_tjsp'].apply(lambda x: ", ".join(sorted(set(x.astype(str))))).reset_index()
     foro_cities.columns = ['id_foro_ibge', 'cidades_no_foro']
     df_final = df_final.merge(foro_cities, on='id_foro_ibge', how='left')
+
+    # Quantities of Cities
+    df_final['qt_cidades_cj'] = df_final['cidades_na_cj'].apply(lambda x: len(str(x).split(',')) if pd.notnull(x) and str(x).strip() else 0)
+    df_final['qt_cidades_foro'] = df_final['cidades_no_foro'].apply(lambda x: len(str(x).split(',')) if pd.notnull(x) and str(x).strip() else 0)
 
     # Final Schema Formatting
     gdf_state = gdf_mun.merge(df_final, left_on='id_municipio_ibge', right_on='id_municipio', how='inner')
@@ -121,18 +174,34 @@ def main():
     gdf_state['nome_foro'] = gdf_state['comarca_tjsp']
     gdf_state['nome_municipio'] = gdf_state['municipio_tjsp']
     gdf_state = gdf_state.rename(columns={'cj': 'nome_cj', 'raj': 'nome_raj', 'populacao_foro_varas': 'total_varas_foro', 'entrancia_foro': 'entrancia'})
+    
+    # Clean up nome_raj to remove the " RAJ " string (e.g. "8ª RAJ Bauru" -> "8ª Bauru")
+    gdf_state['nome_raj'] = gdf_state['nome_raj'].str.replace(r'\s+RAJ\s+', ' ', regex=True)
+    
+    # Format nome_cj to include ordinal (e.g., "14ª Barretos")
+    gdf_state['nome_cj'] = gdf_state.apply(
+        lambda row: f"{int(row['id_cj'])}ª {row['nome_cj']}" if pd.notnull(row['id_cj']) and pd.notnull(row['nome_cj']) and int(row['id_cj']) > 0 else row['nome_cj'], 
+        axis=1
+    )
 
     clean_cols = [
         'id_municipio_ibge', 'nome_municipio', 'populacao_municipio',
         'id_foro', 'nome_foro', 'total_varas_foro', 'entrancia',
         'endereco_sede', 'latitude', 'longitude',
         'id_cj', 'nome_cj', 'id_raj', 'nome_raj',
-        'populacao_foro', 'cidades_no_foro', 'cidades_na_cj', 'unidades', 'total_varas_municipio'
+        'populacao_foro', 'qt_cidades_foro', 'cidades_no_foro', 
+        'qt_cidades_cj', 'cidades_na_cj', 'unidades', 'total_varas_municipio',
+        'varas_municipio', 'varas_foro'
     ]
 
     def finalize_layer(gdf):
         for col in clean_cols:
             if col not in gdf.columns: gdf[col] = None
+        
+        # Promote any Polygon to MultiPolygon to prevent PostGIS import errors
+        if 'geometry' in gdf.columns:
+            gdf['geometry'] = [MultiPolygon([geom]) if isinstance(geom, Polygon) else geom for geom in gdf.geometry]
+            
         return gdf[clean_cols + (['geometry'] if 'geometry' in gdf.columns else [])]
 
     # Export
@@ -140,11 +209,11 @@ def main():
     finalize_layer(gdf_state).to_file(os.path.join(OUTPUT_DIR, "tjsp_municipios_sp.geojson"), driver='GeoJSON', encoding='utf-8')
     finalize_layer(gdf_state).drop(columns=['geometry']).to_csv(os.path.join(OUTPUT_DIR, "tjsp_mapeamento_bi.csv"), index=False, sep=';', encoding='utf-8-sig')
     
-    # Points layer
-    gdf_pts = gdf_state[gdf_state['id_municipio_ibge'] == gdf_state['id_foro_ibge']].copy()
+    # Points layer (all municipalities)
+    gdf_pts = gdf_state.copy()
     gdf_pts['geometry'] = gdf_pts['centroid']
     if not gdf_pts.empty:
-        finalize_layer(gdf_pts).to_file(os.path.join(OUTPUT_DIR, "tjsp_foros_sedes_sp.geojson"), driver='GeoJSON', encoding='utf-8')
+        finalize_layer(gdf_pts).to_file(os.path.join(OUTPUT_DIR, "tjsp_municipios_pontos_sp.geojson"), driver='GeoJSON', encoding='utf-8')
 
     print(f"\nSuccess! Mapping enriched with Varas and Entrancia.")
 
