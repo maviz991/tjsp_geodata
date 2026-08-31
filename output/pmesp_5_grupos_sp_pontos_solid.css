@@ -1,0 +1,13 @@
+/* pmesp_5_grupos_sp_pontos (grupo/esquadra, cor única) — cor única (sem categorização por comando), tamanho 3px */
+
+/* @title Grupos/Esquadras */
+* {
+  mark: symbol(circle);
+  mark-size: 3;
+  :mark {
+    fill: #6a4c93;
+    fill-opacity: 0.9;
+    stroke: #232323;
+    stroke-width: 0.6;
+  }
+}

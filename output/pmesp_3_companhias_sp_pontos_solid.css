@@ -1,0 +1,13 @@
+/* pmesp_3_companhias_sp_pontos (companhia, cor única) — cor única (sem categorização por comando), tamanho 7px */
+
+/* @title Companhias */
+* {
+  mark: symbol(circle);
+  mark-size: 7;
+  :mark {
+    fill: #2a9d8f;
+    fill-opacity: 0.9;
+    stroke: #232323;
+    stroke-width: 0.6;
+  }
+}

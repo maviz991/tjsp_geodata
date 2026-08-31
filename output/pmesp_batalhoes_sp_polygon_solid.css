@@ -1,0 +1,9 @@
+/* pmesp_batalhoes_sp_polygon (batalhão, cor única) — cor única (sem categorização por comando) */
+
+/* @title Batalhões */
+* {
+  fill: #fca311;
+  fill-opacity: 0.5;
+  stroke: #232323;
+  stroke-width: 0.4;
+}

@@ -1,0 +1,177 @@
+/* pmesp_municipios_sp_polygon (municípios por comando) — preencher por id_comando (categórico, 22 categorias) */
+
+/* @title 1º Comando de Policiamento de Área Metropolitana (CPA/M-1) */
+[id_comando = 'CPA/M-1'] {
+  fill: #d86161;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 10º Comando de Policiamento de Área Metropolitana (CPA/M-10) */
+[id_comando = 'CPA/M-10'] {
+  fill: #d88261;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 11º Comando de Policiamento de Área Metropolitana (CPA/M-11) */
+[id_comando = 'CPA/M-11'] {
+  fill: #d8a261;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 12º Comando de Policiamento de Área Metropolitana (CPA/M-12) */
+[id_comando = 'CPA/M-12'] {
+  fill: #d8c361;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 2º Comando de Policiamento de Área Metropolitana (CPA/M-2) */
+[id_comando = 'CPA/M-2'] {
+  fill: #cdd861;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 3º Comando de Policiamento de Área Metropolitana (CPA/M-3) */
+[id_comando = 'CPA/M-3'] {
+  fill: #add861;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 4º Comando de Policiamento de Área Metropolitana (CPA/M-4) */
+[id_comando = 'CPA/M-4'] {
+  fill: #8cd861;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 5º Comando de Policiamento de Área Metropolitana (CPA/M-5) */
+[id_comando = 'CPA/M-5'] {
+  fill: #6cd861;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 6º Comando de Policiamento de Área Metropolitana (CPA/M-6) */
+[id_comando = 'CPA/M-6'] {
+  fill: #61d877;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 7º Comando de Policiamento de Área Metropolitana (CPA/M-7) */
+[id_comando = 'CPA/M-7'] {
+  fill: #61d897;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 8º Comando de Policiamento de Área Metropolitana (CPA/M-8) */
+[id_comando = 'CPA/M-8'] {
+  fill: #61d8b8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 9º Comando de Policiamento de Área Metropolitana (CPA/M-9) */
+[id_comando = 'CPA/M-9'] {
+  fill: #61d8d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 1º Comando de Policiamento do Interior (CPI-1) */
+[id_comando = 'CPI-1'] {
+  fill: #61b8d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 10º Comando de Policiamento do Interior (CPI-10) */
+[id_comando = 'CPI-10'] {
+  fill: #6197d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 2º Comando de Policiamento do Interior (CPI-2) */
+[id_comando = 'CPI-2'] {
+  fill: #6177d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 3º Comando de Policiamento do Interior (CPI-3) */
+[id_comando = 'CPI-3'] {
+  fill: #6c61d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 4º Comando de Policiamento do Interior (CPI-4) */
+[id_comando = 'CPI-4'] {
+  fill: #8c61d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 5º Comando de Policiamento do Interior (CPI-5) */
+[id_comando = 'CPI-5'] {
+  fill: #ad61d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 6º Comando de Policiamento do Interior (CPI-6) */
+[id_comando = 'CPI-6'] {
+  fill: #cd61d8;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 7º Comando de Policiamento do Interior (CPI-7) */
+[id_comando = 'CPI-7'] {
+  fill: #d861c3;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 8º Comando de Policiamento do Interior (CPI-8) */
+[id_comando = 'CPI-8'] {
+  fill: #d861a2;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}
+
+/* @title 9º Comando de Policiamento do Interior (CPI-9) */
+[id_comando = 'CPI-9'] {
+  fill: #d86182;
+  fill-opacity: 0.85;
+  stroke: #232323;
+  stroke-width: 0.4;
+}

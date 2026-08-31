@@ -1,0 +1,9 @@
+/* pmesp_municipios_sp_polygon (município, cor única) — cor única (sem categorização por comando) */
+
+/* @title Municípios */
+* {
+  fill: #e5e5e5;
+  fill-opacity: 0.6;
+  stroke: #232323;
+  stroke-width: 0.4;
+}

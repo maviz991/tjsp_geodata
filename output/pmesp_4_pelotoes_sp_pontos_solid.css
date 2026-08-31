@@ -1,0 +1,13 @@
+/* pmesp_4_pelotoes_sp_pontos (pelotão, cor única) — cor única (sem categorização por comando), tamanho 5px */
+
+/* @title Pelotões */
+* {
+  mark: symbol(circle);
+  mark-size: 5;
+  :mark {
+    fill: #264653;
+    fill-opacity: 0.9;
+    stroke: #232323;
+    stroke-width: 0.6;
+  }
+}

@@ -1,0 +1,13 @@
+/* pmesp_1_comandos_sp_pontos (comando, cor única) — cor única (sem categorização por comando), tamanho 16px */
+
+/* @title Comandos */
+* {
+  mark: symbol(circle);
+  mark-size: 16;
+  :mark {
+    fill: #e63946;
+    fill-opacity: 0.9;
+    stroke: #232323;
+    stroke-width: 0.6;
+  }
+}

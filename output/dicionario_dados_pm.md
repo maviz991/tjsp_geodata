@@ -167,11 +167,28 @@ Um ponto por unidade em cada nível — 650 companhias, 1.433 pelotões, 1.060 g
 
 ## Arquivos Gerados
 
-1. `pm_municipios_sp.geojson`: Polígonos de todos os 645 municípios paulistas com o batalhão/comando atrelado e contagens da hierarquia (Camada 1).
-2. `pm_batalhoes_sp.geojson`: Polígonos dos 98 batalhões ativos (55 BPM/I + 43 BPM/M), com geometria oficial ou dissolvida (Camada 2).
-3. `pm_batalhoes_sedes_pontos_sp.geojson`: Pontos das sedes dos 98 batalhões (Camada 3).
-4. `pm_comandos_pontos_sp.geojson`: Pontos das sedes dos 22 comandos (Camada 4).
-5. `pm_companhias_pontos_sp.geojson`: Pontos das 650 companhias (Camada 5).
-6. `pm_pelotoes_pontos_sp.geojson`: Pontos dos 1.433 pelotões (Camada 6).
-7. `pm_grupos_pontos_sp.geojson`: Pontos dos 1.060 grupos/esquadras (Camada 7).
-8. `estilo_pm_comando.sld`: Estilo (22 cores, uma por Comando) para a Camada 2 em QGIS/GeoServer.
+`process_pm_data.py` grava com os nomes abaixo à esquerda (não foi alterado); os nomes à direita são como os arquivos estão hoje em `output/`, renomeados manualmente para publicação no GeoServer, no padrão `pmesp_{numero}_tipo_sp_pontos` para as camadas de ponto (número = ordem hierárquica) e `pmesp_tipo_sp_polygon` para as duas de polígono (sem número, fora da sequência). Os estilos CSS (gerados por `scratch/gen_css_pm.py`) já saem direto com esse nome. Renomear os `.geojson` de novo após cada execução do script continua manual.
+
+| Gerado pelo script | Nome atual em `output/` | Conteúdo |
+| :--- | :--- | :--- |
+| `pm_municipios_sp.geojson` | `pmesp_municipios_sp_polygon.geojson` | Polígonos dos 645 municípios com batalhão/comando e contagens da hierarquia (Camada 1). |
+| `pm_batalhoes_sp.geojson` | `pmesp_batalhoes_sp_polygon.geojson` | Polígonos dos 98 batalhões ativos, geometria oficial ou dissolvida (Camada 2). |
+| `pm_comandos_pontos_sp.geojson` | `pmesp_1_comandos_sp_pontos.geojson` | Pontos dos 22 comandos, com telefone/e-mail (Camada 3). |
+| `pm_batalhoes_sedes_pontos_sp.geojson` | `pmesp_2_batalhoes_sp_pontos.geojson` | Pontos das sedes dos 98 batalhões (Camada 4). |
+| `pm_companhias_pontos_sp.geojson` | `pmesp_3_companhias_sp_pontos.geojson` | Pontos das 650 companhias (Camada 5). |
+| `pm_pelotoes_pontos_sp.geojson` | `pmesp_4_pelotoes_sp_pontos.geojson` | Pontos dos 1.433 pelotões (Camada 6). |
+| `pm_grupos_pontos_sp.geojson` | `pmesp_5_grupos_sp_pontos.geojson` | Pontos dos 1.060 grupos/esquadras (Camada 7). |
+
+**Estilos (CSS do GeoServer — compilam para SLD internamente; nomes já batem com o arquivo atual de cada camada; gerados por `scratch/gen_css_pm.py`):**
+
+9. `estilo_pm_comando.sld`: estilo XML legado (22 cores por Comando), gerado originalmente para a Camada 2 — mantido por compatibilidade, mas substituído em uso pelo CSS abaixo.
+10. `pmesp_municipios_sp_polygon.css` / `pmesp_batalhoes_sp_polygon.css`: preenchimento categórico por `id_comando` (22 cores).
+11. `pmesp_1_comandos_sp_pontos.css` a `pmesp_5_grupos_sp_pontos.css`: ponto colorido pelo **mesmo `id_comando`/mesma paleta dos polígonos** (não por `tipo_batalhao`/`tipo_comando`) — assim um ponto casa visualmente com a cor da região do comando por baixo dele quando as camadas são vistas juntas, em vez de só marcar interior/metropolitano, o que já fica óbvio pela posição. Tamanho decrescente por nível hierárquico (16px comando, 11px batalhão, 7px companhia, 5px pelotão, 3px grupo/esquadra). Sem rótulo em nenhuma das 5 (removido — 22 rótulos por camada em cima uns dos outros ficava mais confuso que útil); a identificação da unidade fica pela cor + pela tabela de atributos.
+12. `pmesp_municipios_sp_polygon_solid.css`, `pmesp_batalhoes_sp_polygon_solid.css`, `pmesp_1_comandos_sp_pontos_solid.css` a `pmesp_5_grupos_sp_pontos_solid.css`: **alternativa de cor única por camada** (sem categorizar por comando) — útil pra ver as 7 camadas juntas distinguindo só o *nível* hierárquico, não o comando. Cada camada tem uma cor fixa própria: município `#e5e5e5`, batalhão (polígono) `#fca311`, comando (ponto) `#e63946`, batalhão (ponto) `#f4a261`, companhia `#2a9d8f`, pelotão `#264653`, grupo/esquadra `#6a4c93`.
+
+**Cuidados ao editar esses CSS — pegadinhas do módulo CSS do GeoServer que já pegaram nessa sessão:**
+* **Não adicionar um `* { ... }` de fallback junto com regras categóricas.** Diferente do CSS de navegador, "a última regra que bate vence" não existe aqui — quando mais de uma regra combina com a mesma feição, **as duas são desenhadas, uma sobre a outra** (pensado pra empilhar símbolos, tipo contorno + preenchimento). Como toda feição aqui sempre tem um `id_comando` válido, um `*{}` de fallback bate em cima da regra colorida específica E desenha por cima — foi isso que deixou os 22 comandos aparecendo cinza da primeira vez. Os arquivos categóricos não têm fallback por causa disso; os `_solid` usam `* { ... }` sozinho, sem conflito, porque é a única regra do arquivo.
+* **`mark: symbol(circle)` sem aspas.** Com aspas (`symbol('circle')`) o nome da marca não é reconhecido e cai no padrão cinza do GeoServer.
+* **`fill`/`stroke` de um mark explícito vão dentro de `:mark { ... }`**, nunca soltos ao lado de `mark: symbol(...)` — soltos, são ignorados silenciosamente (sem erro) e o símbolo usa o preenchimento cinza padrão.
+* **O bloco `:mark { ... }` tem que ser o último item da regra.** Qualquer propriedade solta depois dele (como `label:`) dá erro de parse (`Invalid input ..., expected ... '}'`).
+* **Título de legenda vem de um comentário `/* @title ... */` imediatamente antes da regra**, não é gerado automaticamente a partir do seletor — sem ele, a legenda mostra o símbolo colorido sem nenhum texto ao lado.

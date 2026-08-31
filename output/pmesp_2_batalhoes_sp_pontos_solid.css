@@ -1,0 +1,13 @@
+/* pmesp_2_batalhoes_sp_pontos (batalhão, cor única) — cor única (sem categorização por comando), tamanho 11px */
+
+/* @title Batalhões */
+* {
+  mark: symbol(circle);
+  mark-size: 11;
+  :mark {
+    fill: #f4a261;
+    fill-opacity: 0.9;
+    stroke: #232323;
+    stroke-width: 0.6;
+  }
+}
